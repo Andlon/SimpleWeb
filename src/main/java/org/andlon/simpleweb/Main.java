@@ -1,3 +1,5 @@
+package org.andlon.simpleweb;
+
 import java.io.IOException;
 
 public class Main {

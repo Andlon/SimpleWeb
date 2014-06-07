@@ -1,6 +1,9 @@
 # IntelliJ IDEA files
 .idea/
 
+# Target output directory
+target/
+
 *.class
 
 # Mobile Tools for Java (J2ME)
