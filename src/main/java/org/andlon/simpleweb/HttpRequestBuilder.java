@@ -23,8 +23,8 @@ public class HttpRequestBuilder {
         }
     }
 
-    public Optional<HttpRequest> request() {
-        return Optional.ofNullable((HttpRequest) m_request);
+    public HttpRequest request() {
+        return m_request;
     }
 
     private void transition(State state) {
@@ -89,6 +89,7 @@ public class HttpRequestBuilder {
             put("GET", Type.GET);
             put("HEAD", Type.HEAD);
             put("POST", Type.POST);
+            put("PUT", Type.PUT);
             put("DELETE", Type.DELETE);
             put("TRACE", Type.TRACE);
             put("OPTIONS", Type.OPTIONS);
