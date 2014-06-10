@@ -65,8 +65,6 @@ public class HttpRequestBuilder {
         public Map<String, String> headers() { return new HashMap <String, String>(); }
         public String body() { return new String(); }
 
-
-
         @Override
         public String uri() {
             return m_uri;
@@ -85,7 +83,7 @@ public class HttpRequestBuilder {
             m_version = version;
         }
 
-        private static final HashMap<String, Type> typeMap = new HashMap<String, Type>() {{
+        private static final HashMap<String, Type> TYPEMAP = new HashMap<String, Type>() {{
             put("GET", Type.GET);
             put("HEAD", Type.HEAD);
             put("POST", Type.POST);
@@ -98,7 +96,7 @@ public class HttpRequestBuilder {
         }};
 
         static public IncrementalHttpRequest fromRequestString(String request) {
-            Type type = typeMap.get(request);
+            Type type = TYPEMAP.get(request);
             return type == null ? null : new IncrementalHttpRequest(type);
         }
     }
@@ -167,6 +165,8 @@ public class HttpRequestBuilder {
                 switch (c) {
                     case ' ':
                         String uri = builder.takeText();
+                        if (uri.isEmpty())
+                            throw(new MalformedRequestException("URI cannot be empty."));
                         builder.mutableRequest().setUri(uri);
                         builder.transition(REQUESTLINE_VERSION);
                         return false;
@@ -184,6 +184,8 @@ public class HttpRequestBuilder {
                 switch (c) {
                     case '\r':
                         String version = builder.takeText();
+                        if (version.isEmpty())
+                            throw(new MalformedRequestException("Version string cannot be empty."));
                         builder.mutableRequest().setVersion(version);
                         builder.transition(REQUESTLINE_CR);
                         return false;
