@@ -45,7 +45,7 @@ public class SimpleWebServer {
         private long m_lastCommunication;
         private HttpRequestBuilder m_builder = new HttpRequestBuilder();
 
-        private final int TIMEOUT_MILLISECONDS = 5000000;
+        private final int TIMEOUT_MILLISECONDS = 5000;
 
         private Connection(Socket socket) {
             m_socket = socket;
@@ -63,7 +63,6 @@ public class SimpleWebServer {
         }
 
         public void disconnect() {
-            System.out.println("Disconnecting...");
             try {
                 m_socket.close();
             } catch (IOException e) { }
@@ -81,11 +80,6 @@ public class SimpleWebServer {
                     while (m_reader.ready()) {
                         char c = (char) m_reader.read();
                         m_builder.add(c);
-                    }
-
-                    if (m_builder.isComplete()) {
-                        System.out.println("Got valid HTTP request:");
-                        System.out.println(m_builder.request().toString());
                     }
 
                     m_lastCommunication = Instant.now().toEpochMilli();

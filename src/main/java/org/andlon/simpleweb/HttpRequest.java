@@ -21,6 +21,9 @@ public interface HttpRequest {
     public Type type();
     public String uri();
     public String version();
+
+    public String host();
+
     public Map<String, String> headers();
     public String body();
 }

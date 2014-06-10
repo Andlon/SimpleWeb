@@ -9,6 +9,8 @@ import java.util.Optional;
 
 
 public class HttpRequestBuilderTest {
+    private final String SIMPLEREQUEST = "POST /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n";
+
     @BeforeClass
     public void setup() {
 
@@ -61,5 +63,17 @@ public class HttpRequestBuilderTest {
 
         for (char c : requestLine.toCharArray())
             builder.add(c);
+    }
+
+    @Test()
+    public void testHostField() throws MalformedRequestException {
+        HttpRequestBuilder builder = new HttpRequestBuilder();
+
+        for (char c : SIMPLEREQUEST.toCharArray())
+            builder.add(c);
+
+        HttpRequest request = builder.request();
+        Assert.assertNotNull(request);
+        Assert.assertEquals(request.host(), "www.example.com");
     }
 }

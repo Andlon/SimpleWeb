@@ -4,7 +4,6 @@ import java.util.Queue;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Created by Andreas on 31.05.2014.
@@ -12,84 +11,102 @@ import java.util.Optional;
  * Incremental HTTP Request parser
  */
 public class HttpRequestBuilder {
-    private Queue<HttpRequest> m_requests = new ArrayDeque<HttpRequest>();
-    private State m_state = States.BEGIN;
-    private IncrementalHttpRequest m_request;
-    private StringBuilder m_builder = new StringBuilder();
-    private String m_currentHeader = new String();
-    private HashMap<String, String> m_headers = new HashMap();
+    private State state = States.BEGIN;
+    private IncrementalHttpRequest request;
+    private StringBuilder builder = new StringBuilder();
+    private String currentHeader = new String();
+    private HashMap<String, String> headers = new HashMap<String, String>();
 
     public void add(char c) throws MalformedRequestException {
-        if (m_state.process(this, c)) {
-            m_builder.append(c);
+        if (state.process(this, c)) {
+            builder.append(c);
         }
     }
 
     public HttpRequest request() {
-        return m_request;
+        return request;
     }
 
     public boolean isComplete() {
-        return m_state == States.END;
+        return state == States.END;
     }
 
     private void transition(State state) {
-        m_state = state;
+        this.state = state;
     }
 
     private void initiateRequest(String requestType) throws MalformedRequestException {
-        m_request = IncrementalHttpRequest.fromRequestString(requestType);
+        request = IncrementalHttpRequest.fromRequestString(requestType);
 
-        if (m_request == null) {
+        if (request == null) {
             throw new MalformedRequestException("Invalid request type: ".concat(requestType));
         }
     }
 
     private String takeText() {
-        String text = m_builder.toString();
-        m_builder.setLength(0);
+        String text = builder.toString();
+        builder.setLength(0);
         return text;
     }
 
     private void setCurrentHeaderName(String header) {
-        m_currentHeader = header;
+        currentHeader = header;
     }
 
     private String currentHeaderName() {
-        return m_currentHeader;
+        return currentHeader;
     }
 
     private void setHeader(String name, String value) {
-        m_headers.put(name, value);
+        // Since headers are case-insensitive, we only store lower-case names,
+        // and per the HTTP specifications we trim the values
+        headers.put(name.toLowerCase(), value.trim());
     }
 
     private void commitHeaders() {
-        // Extract known headers
+        assert(request != null);
 
+        // Extract known headers
+        request.setHost(headers.remove("host"));
     }
 
     private boolean hasBody() {
         return false;
     }
 
-    private MutableHttpRequest mutableRequest() { return m_request; }
+    private MutableHttpRequest mutableRequest() { return request; }
 
     static private interface MutableHttpRequest extends HttpRequest {
         public void setVersion(String version);
         public void setUri(String uri);
+        public void setHost(String host);
     }
 
     static private class IncrementalHttpRequest implements MutableHttpRequest {
-        private Type m_type;
-        private String m_version = new String();
-        private String m_uri = new String();
+        private Type type;
+        private String version = new String();
+        private String uri = new String();
+        private String host;
 
         public IncrementalHttpRequest(Type type) {
-            m_type = type;
+            this.type = type;
         }
 
         @Override
-        public Type type() { return m_type; }
+        public Type type() { return type; }
+
+        @Override
+        public String uri() {
+            return uri;
+        }
+
+        @Override
+        public String version() {
+            return version;
+        }
+
+        @Override
+        public String host() { return host; }
 
         @Override
         public Map<String, String> headers() { return new HashMap <String, String>(); }
@@ -98,24 +115,17 @@ public class HttpRequestBuilder {
         public String body() { return new String(); }
 
         @Override
-        public String uri() {
-            return m_uri;
-        }
-
-        @Override
         public void setUri(String uri) {
-            m_uri = uri;
-        }
-
-        @Override
-        public String version() {
-            return m_version;
+            this.uri = uri;
         }
 
         @Override
         public void setVersion(String version) {
-            m_version = version;
+            this.version = version;
         }
+
+        @Override
+        public void setHost(String host) { this.host = host; }
 
         @Override
         public String toString() {
@@ -268,7 +278,7 @@ public class HttpRequestBuilder {
                         if (header.isEmpty())
                             throw(new MalformedRequestException("Header value cannot be empty."));
 
-                        builder.setCurrentHeaderName(builder.takeText());
+                        builder.setCurrentHeaderName(header);
                         builder.transition(HEADER_VALUE);
                         return false;
                     case '\r':
