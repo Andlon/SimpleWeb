@@ -6,10 +6,10 @@ public class Main {
 
     public static void main(String[] args) {
         try {
-            System.out.println("Starting web server on port 8080...");
-            SimpleWebServer server = new SimpleWebServer(8080);
+            System.out.println("Starting web server on port 9000...");
+            SimpleWebServer server = new SimpleWebServer(9000);
             server.run();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

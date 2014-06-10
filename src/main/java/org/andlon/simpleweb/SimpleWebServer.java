@@ -43,8 +43,9 @@ public class SimpleWebServer {
         private BufferedReader m_reader;
         private BufferedWriter m_writer;
         private long m_lastCommunication;
+        private HttpRequestBuilder m_builder = new HttpRequestBuilder();
 
-        private final int TIMEOUT_MILLISECONDS = 5000;
+        private final int TIMEOUT_MILLISECONDS = 5000000;
 
         private Connection(Socket socket) {
             m_socket = socket;
@@ -62,6 +63,7 @@ public class SimpleWebServer {
         }
 
         public void disconnect() {
+            System.out.println("Disconnecting...");
             try {
                 m_socket.close();
             } catch (IOException e) { }
@@ -75,16 +77,26 @@ public class SimpleWebServer {
         boolean poll() {
             try {
                 if (m_reader.ready()) {
+
                     while (m_reader.ready()) {
-                        System.out.print((char) m_reader.read());
+                        char c = (char) m_reader.read();
+                        m_builder.add(c);
                     }
+
+                    if (m_builder.isComplete()) {
+                        System.out.println("Got valid HTTP request:");
+                        System.out.println(m_builder.request().toString());
+                    }
+
                     m_lastCommunication = Instant.now().toEpochMilli();
                     return true;
                 }
             } catch (IOException e) {
-
+                e.printStackTrace();
+            } catch (MalformedRequestException e) {
+                // Send 400 Bad Request here
+                e.printStackTrace();
             }
-
             return false;
         }
     }
@@ -112,8 +124,10 @@ public class SimpleWebServer {
 
         private void update() {
             synchronized(newConnectionsLock) {
-                m_connections.addAll(m_newConnections);
-                m_newConnections.clear();
+                if (!m_newConnections.isEmpty()) {
+                    m_connections.addAll(m_newConnections);
+                    m_newConnections.clear();
+                }
             }
 
             // Keep working until there is no more work, then schedule a timed update

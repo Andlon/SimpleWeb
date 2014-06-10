@@ -16,6 +16,8 @@ public class HttpRequestBuilder {
     private State m_state = States.BEGIN;
     private IncrementalHttpRequest m_request;
     private StringBuilder m_builder = new StringBuilder();
+    private String m_currentHeader = new String();
+    private HashMap<String, String> m_headers = new HashMap();
 
     public void add(char c) throws MalformedRequestException {
         if (m_state.process(this, c)) {
@@ -25,6 +27,10 @@ public class HttpRequestBuilder {
 
     public HttpRequest request() {
         return m_request;
+    }
+
+    public boolean isComplete() {
+        return m_state == States.END;
     }
 
     private void transition(State state) {
@@ -45,6 +51,27 @@ public class HttpRequestBuilder {
         return text;
     }
 
+    private void setCurrentHeaderName(String header) {
+        m_currentHeader = header;
+    }
+
+    private String currentHeaderName() {
+        return m_currentHeader;
+    }
+
+    private void setHeader(String name, String value) {
+        m_headers.put(name, value);
+    }
+
+    private void commitHeaders() {
+        // Extract known headers
+
+    }
+
+    private boolean hasBody() {
+        return false;
+    }
+
     private MutableHttpRequest mutableRequest() { return m_request; }
 
     static private interface MutableHttpRequest extends HttpRequest {
@@ -61,8 +88,13 @@ public class HttpRequestBuilder {
             m_type = type;
         }
 
+        @Override
         public Type type() { return m_type; }
+
+        @Override
         public Map<String, String> headers() { return new HashMap <String, String>(); }
+
+        @Override
         public String body() { return new String(); }
 
         @Override
@@ -70,6 +102,7 @@ public class HttpRequestBuilder {
             return m_uri;
         }
 
+        @Override
         public void setUri(String uri) {
             m_uri = uri;
         }
@@ -79,8 +112,26 @@ public class HttpRequestBuilder {
             return m_version;
         }
 
+        @Override
         public void setVersion(String version) {
             m_version = version;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder builder = new StringBuilder();
+
+            builder.append(type().toString());
+            builder.append(' ');
+            builder.append(uri());
+            builder.append(' ');
+            builder.append(version());
+            builder.append("\r\n");
+
+            // Skip headers for now
+            builder.append("\r\n");
+
+            return builder.toString();
         }
 
         private static final HashMap<String, Type> TYPEMAP = new HashMap<String, Type>() {{
@@ -211,25 +262,73 @@ public class HttpRequestBuilder {
         HEADER_KEY {
             @Override
             public boolean process(HttpRequestBuilder builder, char c) throws MalformedRequestException {
-                return true;
+                switch (c) {
+                    case ':':
+                        String header = builder.takeText();
+                        if (header.isEmpty())
+                            throw(new MalformedRequestException("Header value cannot be empty."));
+
+                        builder.setCurrentHeaderName(builder.takeText());
+                        builder.transition(HEADER_VALUE);
+                        return false;
+                    case '\r':
+                        String text = builder.takeText();
+                        if (text.isEmpty()) {
+                            // Signals headers are completely specified, move on to HEADER_KEY_CR,
+                            // which checks whether '\n' is the next character
+                            builder.transition(BOUNDARY_CR);
+                            return false;
+                        }
+                    case '\n':
+                        throw(new MalformedRequestException(
+                                "Unexpected carriage return or newline character in header name."));
+                    default:
+                        return true;
+                }
             }
         },
         HEADER_VALUE {
             @Override
             public boolean process(HttpRequestBuilder builder, char c) throws MalformedRequestException {
-                return true;
+                switch (c) {
+                    case '\r':
+                        String value = builder.takeText();
+                        String header = builder.currentHeaderName();
+                        builder.setHeader(header, value);
+                        builder.transition(HEADER_CR);
+                        return false;
+                    case '\n':
+                        // Note: currently don't support multi-line header fields. My impression so far
+                        // is that this is a deprecated feature anyway - need to do more research
+                        throw(new MalformedRequestException("Unexpected newline in field value."));
+                    default:
+                        return true;
+                }
             }
         },
         HEADER_CR {
             @Override
             public boolean process(HttpRequestBuilder builder, char c) throws MalformedRequestException {
-                return true;
+                switch (c) {
+                    case '\n':
+                        builder.transition(HEADER_KEY);
+                        return false;
+                    default:
+                        throw(new MalformedRequestException("Expected newline, got " + c));
+                }
             }
         },
-        BOUNDARY {
+        BOUNDARY_CR {
             @Override
             public boolean process(HttpRequestBuilder builder, char c) throws MalformedRequestException {
-                return true;
+                switch (c) {
+                    case '\n':
+                        builder.commitHeaders();
+                        builder.transition(builder.hasBody() ? BODY : END);
+                        return false;
+                    default:
+                        throw(new MalformedRequestException("Expected newline. Got " + c));
+                }
             }
         },
         BODY {

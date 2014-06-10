@@ -17,25 +17,25 @@ public class HttpRequestBuilderTest {
     @DataProvider(name = "simpleRequests")
     public Object[][] createSimpleRequests() {
         return new Object[][] {
-                { HttpRequest.Type.POST, "POST /index.html HTTP/1.1\r\nHost: www.example.com\r\n" },
-                { HttpRequest.Type.GET, "GET /index.html HTTP/1.1\r\nHost: www.example.com\r\n" },
-                { HttpRequest.Type.HEAD, "HEAD /index.html HTTP/1.1\r\nHost: www.example.com\r\n" },
-                { HttpRequest.Type.PUT, "PUT /index.html HTTP/1.1\r\nHost: www.example.com\r\n" },
-                { HttpRequest.Type.DELETE, "DELETE /index.html HTTP/1.1\r\nHost: www.example.com\r\n" },
-                { HttpRequest.Type.TRACE, "TRACE /index.html HTTP/1.1\r\nHost: www.example.com\r\n" },
-                { HttpRequest.Type.OPTIONS, "OPTIONS /index.html HTTP/1.1\r\nHost: www.example.com\r\n" },
-                { HttpRequest.Type.CONNECT, "CONNECT /index.html HTTP/1.1\r\nHost: www.example.com\r\n" },
-                { HttpRequest.Type.PATCH, "PATCH /index.html HTTP/1.1\r\nHost: www.example.com\r\n" }
+                { HttpRequest.Type.POST, "POST /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n" },
+                { HttpRequest.Type.GET, "GET /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n" },
+                { HttpRequest.Type.HEAD, "HEAD /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n" },
+                { HttpRequest.Type.PUT, "PUT /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n" },
+                { HttpRequest.Type.DELETE, "DELETE /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n" },
+                { HttpRequest.Type.TRACE, "TRACE /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n" },
+                { HttpRequest.Type.OPTIONS, "OPTIONS /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n" },
+                { HttpRequest.Type.CONNECT, "CONNECT /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n" },
+                { HttpRequest.Type.PATCH, "PATCH /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n" }
         };
     }
 
     @DataProvider(name = "simpleRequestsExceptFail")
     public Object[][] createSimpleRequestsExpectedToFail() {
         return new Object[][] {
-                { "GET  /index.html HTTP/1.1\r\nHost: www.example.com\r\n" },   // Extra space after GET
-                { "POST HTTP/1.1\r\nHost: www.example.com\r\n" },               // No URI
-                { "GET / HTTP/1.1\nHost: www.example.com\r\n"},                 // No \r
-                { "NA / HTTP/1.1\r\nHost: www.example.com\r\n"}                 // Invalid method
+                { "GET  /index.html HTTP/1.1\r\nHost: www.example.com\r\n\r\n" },   // Extra space after GET
+                { "POST HTTP/1.1\r\nHost: www.example.com\r\n\r\n" },               // No URI
+                { "GET / HTTP/1.1\nHost: www.example.com\r\n\r\n"},                 // No \r
+                { "NA / HTTP/1.1\r\nHost: www.example.com\r\n\r\n"}                 // Invalid method
         };
     }
 
@@ -51,6 +51,7 @@ public class HttpRequestBuilderTest {
         Assert.assertEquals(request.type(), expectedType);
         Assert.assertEquals(request.uri(), "/index.html");
         Assert.assertEquals(request.version(), "HTTP/1.1");
+        Assert.assertTrue(builder.isComplete());
     }
 
     @Test(dataProvider = "simpleRequestsExceptFail", expectedExceptions = MalformedRequestException.class)
